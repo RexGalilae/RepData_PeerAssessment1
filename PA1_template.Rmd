@@ -2,24 +2,121 @@
 title: "Reproducible Research: Peer Assessment 1"
 output: 
   html_document:
-    keep_md: true
+    keep_md: yes
 ---
+## Load up all dependencies and set global variables
+```{r setoptions, results='hide', message=FALSE, warning=FALSE}
+library(knitr)
+library(dplyr)
+library(xtable)
+library(datasets)
+library(ggplot2)
+library(tcltk)
 
+opts_chunk$set(message=FALSE, warning=FALSE, fig.path = "figs/fig-")
+```
 
-## Loading and preprocessing the data
-
-
+## Load and preprocess the data
+```{r data, results='asis'}
+df <- read.csv(unz("activity.zip","activity.csv"))
+df$date <- as.Date.factor(df$date)
+print(xtable(head(df)), type = 'html')
+```
 
 ## What is mean total number of steps taken per day?
+#### Apply 'sum' to each unique 'date' entry in the dataset
+```{r sum}
+sums <- tapply(df$steps, df$date, sum, na.rm = TRUE)
+bwd <- 1200
+```
+#### Plot a histogram showing the frequency distribution of the number of steps per day
+```{r plotsum}
+data_frame(val = sums[sums > 0]) %>% ggplot(.,aes(sums[sums > 0]),)+geom_histogram(binwidth = bwd)+ geom_density(aes(y = bwd*..count..), linetype = "dashed")+xlab("Number of Steps per day")+geom_vline(xintercept = mean(sums), linetype = "dashed", col = "red")+geom_vline(xintercept = median(sums), linetype = "dashed", col = "blue")
 
-
-
+print(summary(sums)[3:4])
+```
 ## What is the average daily activity pattern?
-
-
+#### Apply 'mean' to each unique 'interval' entry in the dataset
+```{r compmean}
+avg_steps <- tapply(df$steps, as.factor(df$interval), mean, na.rm = TRUE)
+```
+#### Plot a time series showing ```Average Number of Steps ~ Interval of the Day```
+```{r tseries2}
+means <- data.frame(cbind(avg_steps,unique(df$interval)))
+names(means) <- c("avg_steps", "interval")
+means %>% ggplot(.,aes(y =avg_steps, x=interval))+geom_line(ch = 4)+geom_smooth(col = "red", linetype = "dashed")+ylim(0,max(avg_steps))+ylab("Average No. of Steps")
+```
 
 ## Imputing missing values
+The next step is going to be a lengthy one. The Progress bar was a gesture on behalf of the author saying "I care about your patience and won't leave you waiting while my inefficient code runs in the background"
+
+#### Set up the Progressbar to load before the document.
+```{r progressbar}
+max <- sum(is.na(df$steps))
+pb <- tkProgressBar(title = "Imputing missing data...",min = 0, max = max)
+```
+
+#### Devise a strategy to impute values based on the distribution (assumed as Normal) of similar, yet known, values already existing within the dataset. 
+This would preserve the uniqueness of each day and interval while also reserving an element of randomness to best simulate the measurements of the actual devices used to record these measurements.
+```{r impute, cache=TRUE}
+sim_df <- df
+set.seed(20160215)
+i <- 0
+for (row in which(is.na(df$steps))){
+        data <- as.vector(df[row,])
+        mu <- mean(df[weekdays(as.Date(df$date)) == weekdays(data[[2]]) & df$interval == data[[3]],1], na.rm = TRUE)
+        sig <- sd(df[weekdays(as.Date(df$date)) == weekdays(data[[2]]) & df$interval == data[[3]],1], na.rm = TRUE)
+        if (is.na(mu) | is.na(sig)){
+                data[1] <- 0.0
+        } else{
+        data[1] <- rnorm(1,mu, sig)
+        }
+        sim_df[row,] <- data
+        i<-i+1
+        setTkProgressBar(pb, i, label = paste(round(i/max*100, 0),"% done"))
+}
+close(pb)
+```
+
+#### Let's confirm if our new dataframe has any missing values remaining
+```{r confirm}
+sum(is.na(sim_df$steps))
+```
+
+#### With that out of the way, let's now compare the imputed data with the original by plotting the histogram again.
+```{r compare, cache=TRUE}
+n_sums <- tapply(sim_df$steps, sim_df$date, sum)
+bwd <- 1200
+
+data_frame(val = n_sums[n_sums > 0]) %>% ggplot(.,aes(n_sums[n_sums > 0]),)+geom_histogram(binwidth = bwd)+ geom_density(aes(y = bwd*..count..), linetype = "dashed")+xlab("Number of Steps per day")+geom_vline(xintercept = mean(n_sums), linetype = "dashed", col = "red")+geom_vline(xintercept = median(n_sums), linetype = "dashed", col = "blue")
+
+print(summary(n_sums)[3:4])
+```
+```{r na, echo=FALSE}
+prop <- mean(is.na(df$steps))*100
+```
 
 
+We notice that imputing the missing data made the overall distribution less skewed (recall our "Normally distibuted" assumption). As a result, the mean and median also seem to be more closely positioned this time. The magnitude of this change owes to the fact that a good **`r prop`%** of the data in the df was calculated as missing and, therefore, was replaced by our symmetrically generated simulated data.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+#### Start by implementing `dplyr`s `mutate` to add a column that categorizes weekdays and weekends. 
+```{r}
+sim_df <- sim_df %>% mutate(day_type = if_else(weekdays(date) %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+sim_df$day_type <- as.factor(sim_df$day_type)
+```
+#### Compute the average number of steps of each day
+```{r}
+means <- sim_df %>% group_by(interval,day_type) %>% summarise(mean(steps))
+names(means) <- c("interval", "day_type", "avg_steps")
+```
+#### Plot a time series showing ```Average Number of Steps ~ Interval of the Day | Type of the Day```
+```{r tseries}
+means %>% ggplot(.,aes(y =avg_steps, x=interval))+geom_line(ch = 4)+geom_smooth(col = "red", linetype = "dashed")+facet_grid(.~day_type)+ylab("Average No. of Steps")
+```
+
+This is rather interesting. As expected, we see activity concentrated more during the early hours of the day on weekdays as people often tend to have routine walks/jogs/work-outs before their commute. Two distinct peaks can be noticed before the 1000-mark which might mark the beginning of office hours and right before the 2000-mark, which would, in turn, mark the end of them.
+
+On the other hand, the activity during weekends seems to have been pushed down the daily timeline and is also spread relatively evenly (albeit noisily) across the day. This is likely due to the fact that people tend to wake up late during weekends and follow no set walking/jogging routine. This causes the distribution to lose its distinct bimodality and appear more smeared out as a result.
+
+#### Hope this study was helpful for you and thanks for the time! :)
