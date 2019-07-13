@@ -46,6 +46,11 @@ means <- data.frame(cbind(avg_steps,unique(df$interval)))
 names(means) <- c("avg_steps", "interval")
 means %>% ggplot(.,aes(y =avg_steps, x=interval))+geom_line(ch = 4)+geom_smooth(col = "red", linetype = "dashed")+ylim(0,max(avg_steps))+ylab("Average No. of Steps")
 ```
+```{r max, echo=FALSE}
+max <- means$interval[which.max(avg_steps)]
+```
+
+On average, the **`r max`th** interval shows the most amount of activity.
 
 ## Imputing missing values
 The next step is going to be a lengthy one. The Progress bar was a gesture on behalf of the author saying "I care about your patience and won't leave you waiting while my inefficient code runs in the background"

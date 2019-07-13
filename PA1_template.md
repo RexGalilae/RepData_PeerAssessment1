@@ -26,7 +26,7 @@ print(xtable(head(df)), type = 'html')
 ```
 
 <!-- html table generated in R 3.6.0 by xtable 1.8-4 package -->
-<!-- Sun Jul 14 02:52:08 2019 -->
+<!-- Sun Jul 14 03:13:23 2019 -->
 <table border=1>
 <tr> <th>  </th> <th> steps </th> <th> date </th> <th> interval </th>  </tr>
   <tr> <td align="right"> 1 </td> <td align="right">  </td> <td align="right"> 15614.00 </td> <td align="right">   0 </td> </tr>
@@ -75,6 +75,9 @@ means %>% ggplot(.,aes(y =avg_steps, x=interval))+geom_line(ch = 4)+geom_smooth(
 ```
 
 ![](figs/fig-tseries2-1.png)<!-- -->
+
+
+On average, the **835th** interval shows the most amount of activity.
 
 ## Imputing missing values
 The next step is going to be a lengthy one. The Progress bar was a gesture on behalf of the author saying "I care about your patience and won't leave you waiting while my inefficient code runs in the background"
