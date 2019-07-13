@@ -26,7 +26,7 @@ print(xtable(head(df)), type = 'html')
 ```
 
 <!-- html table generated in R 3.6.0 by xtable 1.8-4 package -->
-<!-- Sun Jul 14 03:13:23 2019 -->
+<!-- Sun Jul 14 03:33:59 2019 -->
 <table border=1>
 <tr> <th>  </th> <th> steps </th> <th> date </th> <th> interval </th>  </tr>
   <tr> <td align="right"> 1 </td> <td align="right">  </td> <td align="right"> 15614.00 </td> <td align="right">   0 </td> </tr>
@@ -76,6 +76,9 @@ means %>% ggplot(.,aes(y =avg_steps, x=interval))+geom_line(ch = 4)+geom_smooth(
 
 ![](figs/fig-tseries2-1.png)<!-- -->
 
+```r
+max <- means$interval[which.max(avg_steps)]
+```
 
 On average, the **835th** interval shows the most amount of activity.
 
@@ -90,7 +93,14 @@ pb <- tkProgressBar(title = "Imputing missing data...",min = 0, max = max)
 ```
 
 #### Devise a strategy to impute values based on the distribution (assumed as Normal) of similar, yet known, values already existing within the dataset. 
-This would preserve the uniqueness of each day and interval while also reserving an element of randomness to best simulate the measurements of the actual devices used to record these measurements.
+* Locate all entries with missing values
+* Find entries with:
+   1. The same **day of the week**
+   2. The same **5-minute interval**
+* Find the **mean** and **standard deviation** of this set of similar values
+* Impute values picked from a **Normal Distribution** with the same mean and standard deviation. 
+
+This would preserve the uniqueness of each day and interval while also reserving an element of randomness to realistically simulate the device measurements.
 
 ```r
 sim_df <- df

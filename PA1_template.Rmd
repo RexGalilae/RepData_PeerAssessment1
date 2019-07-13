@@ -46,7 +46,7 @@ means <- data.frame(cbind(avg_steps,unique(df$interval)))
 names(means) <- c("avg_steps", "interval")
 means %>% ggplot(.,aes(y =avg_steps, x=interval))+geom_line(ch = 4)+geom_smooth(col = "red", linetype = "dashed")+ylim(0,max(avg_steps))+ylab("Average No. of Steps")
 ```
-```{r max, echo=FALSE}
+```{r max}
 max <- means$interval[which.max(avg_steps)]
 ```
 
@@ -62,7 +62,14 @@ pb <- tkProgressBar(title = "Imputing missing data...",min = 0, max = max)
 ```
 
 #### Devise a strategy to impute values based on the distribution (assumed as Normal) of similar, yet known, values already existing within the dataset. 
-This would preserve the uniqueness of each day and interval while also reserving an element of randomness to best simulate the measurements of the actual devices used to record these measurements.
+* Locate all entries with missing values
+* Find entries with:
+   1. The same **day of the week**
+   2. The same **5-minute interval**
+* Find the **mean** and **standard deviation** of this set of similar values
+* Impute values picked from a **Normal Distribution** with the same mean and standard deviation. 
+
+This would preserve the uniqueness of each day and interval while also reserving an element of randomness to realistically simulate the device measurements.
 ```{r impute, cache=TRUE}
 sim_df <- df
 set.seed(20160215)
